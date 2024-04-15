@@ -30,8 +30,8 @@ var SubNetCmd = &cobra.Command{
 			log.Warnf("ParseStringToIPNet failed: %v", err)
 			return
 		}
-		if command.Opts.BatchMode {
-			BatchRun(ipNets)
+		if command.Opts.MultiThreadingMode {
+			RunMultiThread(ipNets, command.Opts.ThreadingNum)
 		} else {
 			Run(ipNets)
 		}
@@ -47,8 +47,8 @@ func Run(net *net.IPNet) {
 	printResult(records)
 }
 
-func BatchRun(net *net.IPNet) {
-	scan := mutli.NewSubnetScanner()
+func RunMultiThread(net *net.IPNet, num int) {
+	scan := mutli.NewSubnetScanner(num)
 	var finalRecord []define.Record
 	for r := range scan.ScanSubnet(net) {
 		finalRecord = append(finalRecord, r...)

@@ -12,12 +12,20 @@ import (
 )
 
 type SubnetScanner struct {
-	wg *sync.WaitGroup
+	wg    *sync.WaitGroup
+	count int
 }
 
-func NewSubnetScanner() *SubnetScanner {
-	return &SubnetScanner{
-		wg: new(sync.WaitGroup),
+func NewSubnetScanner(threading ...int) *SubnetScanner {
+	if len(threading) == 0 {
+		return &SubnetScanner{
+			wg: new(sync.WaitGroup),
+		}
+	} else {
+		return &SubnetScanner{
+			wg:    new(sync.WaitGroup),
+			count: threading[0],
+		}
 	}
 }
 
@@ -29,9 +37,12 @@ func (s *SubnetScanner) ScanSubnet(subnet *net.IPNet) <-chan []define.Record {
 	out := make(chan []define.Record, 100)
 	go func() {
 		log.Debugf("splitting subnet into 16 pices")
-		if subnets, err := pkg.SubnetShift(subnet, 4); err != nil {
+		// if subnets, err := pkg.SubnetShift(subnet, 4); err != nil {
+		if subnets, err := pkg.SubnetInto(subnet, s.count); err != nil {
+			log.Errorf("Subnet split into %v failed, fallback to single mode, reason: %v", s.count, err)
 			go s.scan(subnet, out)
 		} else {
+			log.Debugf("Subnet split into %v success", len(subnets))
 			for _, sn := range subnets {
 				go s.scan(sn, out)
 			}
