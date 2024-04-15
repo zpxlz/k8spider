@@ -2,12 +2,12 @@ package all
 
 import (
 	"net"
-	"os"
 
 	command "github.com/esonhugh/k8spider/cmd"
 	"github.com/esonhugh/k8spider/define"
 	"github.com/esonhugh/k8spider/pkg"
 	"github.com/esonhugh/k8spider/pkg/mutli"
+	"github.com/esonhugh/k8spider/pkg/printer"
 	"github.com/esonhugh/k8spider/pkg/scanner"
 	"github.com/miekg/dns"
 	log "github.com/sirupsen/logrus"
@@ -27,60 +27,48 @@ var AllCmd = &cobra.Command{
 			log.Warn("cidr is required")
 			return
 		}
+		// Wildcard
+		records := scanner.DumpWildCard(command.Opts.Zone)
+		if records != nil {
+			printer.PrintResult(records, command.Opts.OutputFile)
+		}
+		// AXFR Dumping
 		records, err := scanner.DumpAXFR(dns.Fqdn(command.Opts.Zone), "ns.dns."+command.Opts.Zone+":53")
 		if err == nil {
-			printResult(records)
-			return
+			printer.PrintResult(records, command.Opts.OutputFile)
+		} else {
+			log.Errorf("Transfer failed: %v", err)
 		}
-		log.Errorf("Transfer failed: %v", err)
-		records = scanner.DumpWildCard(command.Opts.Zone)
-		if records != nil && len(records) > 0 {
-			printResult(records)
-			return
-		}
-		log.Errorf("WildCard dns dump failed: %v", err)
-
+		// Service Discovery
 		ipNets, err := pkg.ParseStringToIPNet(command.Opts.Cidr)
 		if err != nil {
 			log.Warnf("ParseStringToIPNet failed: %v", err)
 			return
 		}
-		if command.Opts.BatchMode {
-			RunBatch(ipNets)
+		var finalRecord define.Records
+		if command.Opts.MultiThreadingMode {
+			finalRecord = RunMultiThread(ipNets, command.Opts.ThreadingNum)
 		} else {
-			Run(ipNets)
+			finalRecord = Run(ipNets)
 		}
+		printer.PrintResult(finalRecord, command.Opts.OutputFile)
 	},
 }
 
-func Run(net *net.IPNet) {
+func Run(net *net.IPNet) (finalRecord define.Records) {
 	var records define.Records = scanner.ScanSubnet(net)
 	if records == nil || len(records) == 0 {
 		log.Warnf("ScanSubnet Found Nothing")
 		return
 	}
 	records = scanner.ScanSvcForPorts(records)
-	printResult(records)
+	return
 }
 
-func RunBatch(net *net.IPNet) {
-	scan := mutli.ScanAll(net)
-	var finalRecord []define.Record
+func RunMultiThread(net *net.IPNet, count int) (finalRecord define.Records) {
+	scan := mutli.ScanAll(net, count)
 	for r := range scan {
 		finalRecord = append(finalRecord, r...)
 	}
-	printResult(finalRecord)
-}
-
-func printResult(records define.Records) {
-	if command.Opts.OutputFile != "" {
-		f, err := os.OpenFile(command.Opts.OutputFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			log.Warnf("OpenFile failed: %v", err)
-		}
-		defer f.Close()
-		records.Print(log.StandardLogger().Writer(), f)
-	} else {
-		records.Print(log.StandardLogger().Writer())
-	}
+	return
 }

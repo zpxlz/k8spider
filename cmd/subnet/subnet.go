@@ -2,12 +2,12 @@ package subnet
 
 import (
 	"net"
-	"os"
 
 	command "github.com/esonhugh/k8spider/cmd"
 	"github.com/esonhugh/k8spider/define"
 	"github.com/esonhugh/k8spider/pkg"
 	"github.com/esonhugh/k8spider/pkg/mutli"
+	"github.com/esonhugh/k8spider/pkg/printer"
 	"github.com/esonhugh/k8spider/pkg/scanner"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -19,7 +19,7 @@ func init() {
 
 var SubNetCmd = &cobra.Command{
 	Use:   "subnet",
-	Short: "subnet is a tool to discover k8s available service ip in subnet",
+	Short: "subnet is a tool to discover k8s available ip in subnet",
 	Run: func(cmd *cobra.Command, args []string) {
 		if command.Opts.Cidr == "" {
 			log.Warn("cidr is required")
@@ -30,26 +30,27 @@ var SubNetCmd = &cobra.Command{
 			log.Warnf("ParseStringToIPNet failed: %v", err)
 			return
 		}
-		if command.Opts.BatchMode {
-			BatchRun(ipNets)
+		var finalRecord define.Records
+		if command.Opts.MultiThreadingMode {
+			finalRecord = RunMultiThread(ipNets, command.Opts.ThreadingNum)
 		} else {
-			Run(ipNets)
+			finalRecord = Run(ipNets)
 		}
+		printer.PrintResult(finalRecord, command.Opts.OutputFile)
 	},
 }
 
-func Run(net *net.IPNet) {
-	var records define.Records = scanner.ScanSubnet(net)
+func Run(net *net.IPNet) (records define.Records) {
+	records = scanner.ScanSubnet(net)
 	if records == nil || len(records) == 0 {
 		log.Warnf("ScanSubnet Found Nothing")
 		return
 	}
-	printResult(records)
+	return
 }
 
-func BatchRun(net *net.IPNet) {
-	scan := mutli.NewSubnetScanner()
-	var finalRecord []define.Record
+func RunMultiThread(net *net.IPNet, num int) (finalRecord define.Records) {
+	scan := mutli.NewSubnetScanner(num)
 	for r := range scan.ScanSubnet(net) {
 		finalRecord = append(finalRecord, r...)
 	}
@@ -57,18 +58,5 @@ func BatchRun(net *net.IPNet) {
 		log.Warn("ScanSubnet Found Nothing")
 		return
 	}
-	printResult(finalRecord)
-}
-
-func printResult(records define.Records) {
-	if command.Opts.OutputFile != "" {
-		f, err := os.OpenFile(command.Opts.OutputFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			log.Warnf("OpenFile failed: %v", err)
-		}
-		defer f.Close()
-		records.Print(log.StandardLogger().Writer(), f)
-	} else {
-		records.Print(log.StandardLogger().Writer())
-	}
+	return
 }

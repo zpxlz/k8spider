@@ -19,7 +19,8 @@ var Opts = struct {
 	OutputFile string
 	Verbose    string
 
-	BatchMode bool
+	MultiThreadingMode bool
+	ThreadingNum       int
 }{}
 
 func init() {
@@ -29,7 +30,8 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&Opts.Zone, "zone", "z", "cluster.local", "zone")
 	RootCmd.PersistentFlags().StringVarP(&Opts.OutputFile, "output-file", "o", "", "output file")
 	RootCmd.PersistentFlags().StringVarP(&Opts.Verbose, "verbose", "v", "info", "log level (debug,info,trace,warn,error,fatal,panic)")
-	RootCmd.PersistentFlags().BoolVarP(&Opts.BatchMode, "batch-mode", "b", false, "batch mode")
+	RootCmd.PersistentFlags().BoolVarP(&Opts.MultiThreadingMode, "thread", "t", false, "multi threading mode, work pair with -n")
+	RootCmd.PersistentFlags().IntVarP(&Opts.ThreadingNum, "thread-num", "n", 16, "threading num, default 16")
 }
 
 var RootCmd = &cobra.Command{

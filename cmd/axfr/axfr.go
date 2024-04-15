@@ -1,11 +1,11 @@
 package axfr
 
 import (
-	"os"
 	"strings"
 
 	command "github.com/esonhugh/k8spider/cmd"
 	"github.com/esonhugh/k8spider/define"
+	"github.com/esonhugh/k8spider/pkg/printer"
 	"github.com/esonhugh/k8spider/pkg/scanner"
 	"github.com/miekg/dns"
 	log "github.com/sirupsen/logrus"
@@ -41,16 +41,6 @@ var AxfrCmd = &cobra.Command{
 			log.Errorf("Transfer failed: %v", err)
 			return
 		}
-		if command.Opts.OutputFile != "" {
-			f, err := os.OpenFile(command.Opts.OutputFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			if err != nil {
-				log.Warnf("OpenFile failed: %v", err)
-			}
-			defer f.Close()
-			records.Print(log.StandardLogger().Writer(), f)
-		} else {
-			records.Print(log.StandardLogger().Writer())
-		}
-
+		printer.PrintResult(records, command.Opts.OutputFile)
 	},
 }
