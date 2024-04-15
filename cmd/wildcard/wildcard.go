@@ -20,6 +20,11 @@ var WildCardCmd = &cobra.Command{
 			log.Warn("zone can't empty")
 			return
 		}
-		printer.PrintResult(scanner.DumpWildCard(command.Opts.Zone), command.Opts.OutputFile)
+		record := scanner.DumpWildCard(command.Opts.Zone)
+		if record == nil || len(record) == 0 {
+			log.Warnf("DumpWildCard Found Nothing")
+			return
+		}
+		printer.PrintResult(record, command.Opts.OutputFile)
 	},
 }
