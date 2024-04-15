@@ -34,7 +34,8 @@ func (r *Record) Print(writer ...io.Writer) {
 	if len(writer) == 0 {
 		W = os.Stdout
 	} else {
-		W = io.MultiWriter(writer...)
+		w := io.MultiWriter(writer...)
+		W = io.MultiWriter(os.Stdout, w)
 	}
 	data, err := json.Marshal(r)
 	if err != nil {
