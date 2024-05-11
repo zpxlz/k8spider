@@ -27,6 +27,11 @@ var AllCmd = &cobra.Command{
 			log.Warn("cidr is required")
 			return
 		}
+		// Wildcard
+		records := scanner.DumpWildCard(command.Opts.Zone)
+		if records != nil {
+			printer.PrintResult(records, command.Opts.OutputFile)
+		}
 		// AXFR Dumping
 		records, err := scanner.DumpAXFR(dns.Fqdn(command.Opts.Zone), "ns.dns."+command.Opts.Zone+":53")
 		if err == nil {

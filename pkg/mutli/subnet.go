@@ -36,7 +36,6 @@ func (s *SubnetScanner) ScanSubnet(subnet *net.IPNet) <-chan []define.Record {
 	}
 	out := make(chan []define.Record, 100)
 	go func() {
-		log.Debugf("splitting subnet into 16 pices")
 		// if subnets, err := pkg.SubnetShift(subnet, 4); err != nil {
 		if subnets, err := pkg.SubnetInto(subnet, s.count); err != nil {
 			log.Errorf("Subnet split into %v failed, fallback to single mode, reason: %v", s.count, err)
