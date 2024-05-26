@@ -11,3 +11,9 @@ func ScanAll(subnet *net.IPNet, num int) (result <-chan []define.Record) {
 	result = ScanServiceWithChan(subs.ScanSubnet(subnet))
 	return result
 }
+
+func ScanNeighbor(subnet *net.IPNet, num int) (result <-chan []define.Record) {
+	subs := NewSubnetScanner(num)
+	result = subs.ScanSubnet(subnet)
+	return result
+}

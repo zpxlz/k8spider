@@ -3,7 +3,9 @@ package pkg
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 	"net"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -51,4 +53,8 @@ func SRVRecord(svcDomain string) (string, []*net.SRV, error) {
 func ARecord(domain string) (ips []net.IP, err error) {
 	ips, err = net.LookupIP(domain)
 	return
+}
+
+func IPtoPodHostName(ip string, zone string) string {
+	return fmt.Sprintf("%s.default.pod.%s", strings.ReplaceAll(ip, ".", "-"), zone)
 }
