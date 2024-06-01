@@ -49,6 +49,7 @@ var RootCmd = &cobra.Command{
 				},
 			}
 		}
+		pkg.Zone = Opts.Zone
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		_ = cmd.Help()

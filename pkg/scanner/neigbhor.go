@@ -1,27 +1,23 @@
 package scanner
 
 import (
+	"net"
+
 	"github.com/esonhugh/k8spider/pkg"
+	log "github.com/sirupsen/logrus"
 )
 
-func TestPodVerified(zone string) bool {
-	iplist := []string{
-		"8.8.8.8",
-		"1.1.1.1",
-		"114.114.114.114",
+func ScanPodExist(ip net.IP, ns string) bool {
+	targetHostName := pkg.IPtoPodHostName(ip.String(), ns)
+	ips, err := pkg.ARecord(targetHostName)
+	if err != nil {
+		log.Tracef("ScanPodExist %v failed: %v", ip.String(), err)
+		return false
 	}
-	for _, ip := range iplist {
-		targetHostName := pkg.IPtoPodHostName(ip, zone)
-		ips, err := pkg.ARecord(targetHostName)
-		if err != nil {
-			continue
-		}
-		// all of this ip should not return correct ip if verified is set.
-		for _, i := range ips {
-			if i.String() == ip {
-				return false
-			}
+	for _, i := range ips {
+		if i.String() == ip.String() {
+			return true
 		}
 	}
-	return true
+	return false
 }

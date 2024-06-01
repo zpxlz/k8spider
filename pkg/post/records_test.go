@@ -9,7 +9,7 @@ import (
 )
 
 func TestRecordsDump(t *testing.T) {
-	rs, err := scanner.DumpAXFR("zonetransfer.me.", "81.4.108.41:53")
+	rs, err := scanner.DumpAXFR("zonetransfer.me.", "34.225.33.2:53")
 	if err != nil {
 		t.Errorf("DumpAXFR failed: %v", err)
 	}
