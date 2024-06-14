@@ -1,12 +1,16 @@
 # K8Spider 
 
+<img src="./K8spider.webp" width="200px">
+
+> work like a spider inside your Kubernetes and hunting other service.
+
 K8Spider is a simple tools for Kubernetes Service Discovery. 
 
 It inspired from k8slanparty.com. That dnscan subnet is useful in challenges.
 
 And I extended it ability on Kubernetes Service Discovery.
 
-Now it supports to scan all services installed in Kubernetes cluster and all exposed ports in service.
+Now it supports to scan all services installed in Kubernetes cluster and all exposed ports in service. 
 
 ## Build
 
