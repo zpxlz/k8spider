@@ -53,7 +53,8 @@ func SRVRecord(svcDomain string) (string, []*net.SRV, error) {
 }
 
 func ARecord(domain string) (ips []net.IP, err error) {
-	ips, err = net.LookupIP(domain)
+	// ips, err = NetResolver.LookupIP()
+	ips, err = NetResolver.LookupIP(context.Background(), "ip", domain)
 	return
 }
 
@@ -85,7 +86,7 @@ func TestPodVerified() bool {
 }
 
 func TXTRecord(domain string) (txts []string, err error) {
-	txts, err = net.LookupTXT(domain)
+	txts, err = NetResolver.LookupTXT(context.Background(), domain)
 	return
 }
 
