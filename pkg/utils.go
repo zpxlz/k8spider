@@ -83,3 +83,23 @@ func TestPodVerified() bool {
 	}
 	return true
 }
+
+func TXTRecord(domain string) (txts []string, err error) {
+	txts, err = net.LookupTXT(domain)
+	return
+}
+
+// https://github.com/kubernetes/dns/blob/master/docs/specification.md
+// CheckKubernetes checks if the current environment is a kubernetes cluster
+func CheckKubernetes() bool {
+	_, err := ARecord("kubernetes.default.svc." + Zone)
+	if err != nil {
+		return false
+	}
+	t, err := TXTRecord("dns-version." + Zone)
+	if err != nil {
+		return false
+	}
+	log.Infof("dns-version: %v", strings.Join(t, ","))
+	return true
+}

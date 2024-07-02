@@ -21,6 +21,8 @@ var Opts = struct {
 
 	MultiThreadingMode bool
 	ThreadingNum       int
+
+	SkipKubeDNSCheck bool
 }{}
 
 func init() {
@@ -32,6 +34,8 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&Opts.Verbose, "verbose", "v", "info", "log level (debug,info,trace,warn,error,fatal,panic)")
 	RootCmd.PersistentFlags().BoolVarP(&Opts.MultiThreadingMode, "thread", "t", false, "multi threading mode, work pair with -n")
 	RootCmd.PersistentFlags().IntVarP(&Opts.ThreadingNum, "thread-num", "n", 16, "threading num, default 16")
+
+	RootCmd.PersistentFlags().BoolVarP(&Opts.SkipKubeDNSCheck, "skip-kube-dns-check", "k", false, "skip kube-dns check, force check if current environment is matched kube-dns schema")
 }
 
 var RootCmd = &cobra.Command{
@@ -40,6 +44,12 @@ var RootCmd = &cobra.Command{
 	Long:  "k8spider is a tool to discover k8s services",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		SetLogLevel(Opts.Verbose)
+		if !Opts.SkipKubeDNSCheck { // Not Skip
+			if pkg.CheckKubernetes() {
+				log.Warn("current environment is not a kubernetes cluster")
+				os.Exit(1)
+			}
+		}
 		if Opts.DnsServer != "" {
 			pkg.NetResolver = &net.Resolver{
 				PreferGo: true,
