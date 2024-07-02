@@ -7,6 +7,7 @@ import (
 	"github.com/esonhugh/k8spider/define"
 	"github.com/esonhugh/k8spider/pkg"
 	"github.com/esonhugh/k8spider/pkg/mutli"
+	"github.com/esonhugh/k8spider/pkg/post"
 	"github.com/esonhugh/k8spider/pkg/printer"
 	"github.com/esonhugh/k8spider/pkg/scanner"
 	"github.com/miekg/dns"
@@ -16,7 +17,6 @@ import (
 
 func init() {
 	command.RootCmd.AddCommand(AllCmd)
-
 }
 
 var AllCmd = &cobra.Command{
@@ -52,6 +52,7 @@ var AllCmd = &cobra.Command{
 			finalRecord = Run(ipNets)
 		}
 		printer.PrintResult(finalRecord, command.Opts.OutputFile)
+		PostRun(finalRecord)
 	},
 }
 
@@ -62,7 +63,7 @@ func Run(net *net.IPNet) (finalRecord define.Records) {
 		return
 	}
 	records = scanner.ScanSvcForPorts(records)
-	return
+	return records
 }
 
 func RunMultiThread(net *net.IPNet, count int) (finalRecord define.Records) {
@@ -71,4 +72,17 @@ func RunMultiThread(net *net.IPNet, count int) (finalRecord define.Records) {
 		finalRecord = append(finalRecord, r...)
 	}
 	return
+}
+
+func PostRun(finalRecord define.Records) {
+	log.Info("Extract Namespaces: ")
+	list := post.RecordsDumpNameSpace(finalRecord, command.Opts.Zone)
+	for _, ns := range list {
+		log.Infof("Namespace: %s", ns)
+	}
+	log.Info("Extract Service: ")
+	list = post.RecordsDumpFullService(finalRecord, command.Opts.Zone)
+	for _, svc := range list {
+		log.Infof("Service: %s", svc)
+	}
 }
