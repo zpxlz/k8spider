@@ -18,7 +18,11 @@ func init() {
 }
 
 var SubNetCmd = &cobra.Command{
-	Use:   "subnet",
+	Use: "subnet",
+	Aliases: []string{
+		"sub",
+		"s",
+	},
 	Short: "subnet is a tool to discover k8s available ip in subnet",
 	Run: func(cmd *cobra.Command, args []string) {
 		if command.Opts.Cidr == "" {

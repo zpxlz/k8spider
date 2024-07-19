@@ -16,7 +16,10 @@ func init() {
 }
 
 var ServiceCmd = &cobra.Command{
-	Use:   "service",
+	Use: "service",
+	Aliases: []string{
+		"srv",
+	},
 	Short: "service is a tool to discover k8s services",
 	Run: func(cmd *cobra.Command, args []string) {
 		if command.Opts.Zone == "" || command.Opts.SvcDomains == nil || len(command.Opts.SvcDomains) == 0 {

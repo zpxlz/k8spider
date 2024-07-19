@@ -20,7 +20,10 @@ func init() {
 }
 
 var AllCmd = &cobra.Command{
-	Use:   "all",
+	Use: "all",
+	Aliases: []string{
+		"a",
+	},
 	Short: "all is a tool to discover k8s services and available ip in subnet",
 	Run: func(cmd *cobra.Command, args []string) {
 		if command.Opts.Cidr == "" {

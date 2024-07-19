@@ -1,9 +1,7 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"net"
 	"os"
 
 	"github.com/esonhugh/k8spider/pkg"
@@ -28,6 +26,7 @@ var Opts = struct {
 func init() {
 	RootCmd.PersistentFlags().StringVarP(&Opts.Cidr, "cidr", "c", os.Getenv("KUBERNETES_SERVICE_HOST")+"/16", "cidr like: 192.168.0.1/16")
 	RootCmd.PersistentFlags().StringVarP(&Opts.DnsServer, "dns-server", "d", "", "dns server")
+	RootCmd.PersistentFlags().IntVarP(&pkg.DnsTimeout, "dns-timeout", "i", 2, "dns timeout")
 	RootCmd.PersistentFlags().StringSliceVarP(&Opts.SvcDomains, "svc-domains", "s", []string{}, "service domains, like: kubernetes.default,etcd.default don't add zone like svc.cluster.local")
 	RootCmd.PersistentFlags().StringVarP(&Opts.Zone, "zone", "z", "cluster.local", "zone")
 	RootCmd.PersistentFlags().StringVarP(&Opts.OutputFile, "output-file", "o", "", "output file")
@@ -44,19 +43,13 @@ var RootCmd = &cobra.Command{
 	Long:  "k8spider is a tool to discover k8s services",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		SetLogLevel(Opts.Verbose)
-		if !Opts.SkipKubeDNSCheck { // Not Skip
-			if pkg.CheckKubernetes() {
+		if Opts.DnsServer != "" {
+			pkg.NetResolver = pkg.WarpDnsServer(Opts.DnsServer)
+		}
+		if Opts.SkipKubeDNSCheck == false { // Not Skip
+			if pkg.CheckKubeDNS() {
 				log.Warn("current environment is not a kubernetes cluster")
 				os.Exit(1)
-			}
-		}
-		if Opts.DnsServer != "" {
-			pkg.NetResolver = &net.Resolver{
-				PreferGo: true,
-				Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-					d := net.Dialer{}
-					return d.DialContext(ctx, network, Opts.DnsServer)
-				},
 			}
 		}
 		pkg.Zone = Opts.Zone
