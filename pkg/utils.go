@@ -53,7 +53,8 @@ func SRVRecord(svcDomain string) (string, []*net.SRV, error) {
 }
 
 func ARecord(domain string) (ips []net.IP, err error) {
-	ips, err = net.LookupIP(domain)
+	// ips, err = NetResolver.LookupIP()
+	ips, err = NetResolver.LookupIP(context.Background(), "ip", domain)
 	return
 }
 
@@ -81,5 +82,25 @@ func TestPodVerified() bool {
 			}
 		}
 	}
+	return true
+}
+
+func TXTRecord(domain string) (txts []string, err error) {
+	txts, err = NetResolver.LookupTXT(context.Background(), domain)
+	return
+}
+
+// https://github.com/kubernetes/dns/blob/master/docs/specification.md
+// CheckKubernetes checks if the current environment is a kubernetes cluster
+func CheckKubernetes() bool {
+	_, err := ARecord("kubernetes.default.svc." + Zone)
+	if err != nil {
+		return false
+	}
+	t, err := TXTRecord("dns-version." + Zone)
+	if err != nil {
+		return false
+	}
+	log.Infof("dns-version: %v", strings.Join(t, ","))
 	return true
 }
