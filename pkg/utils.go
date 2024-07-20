@@ -1,68 +1,11 @@
 package pkg
 
 import (
-	"context"
-	"encoding/binary"
-	"fmt"
-	"net"
-	"strings"
-
 	log "github.com/sirupsen/logrus"
 )
 
-var NetResolver *net.Resolver = net.DefaultResolver
-
-var Zone string // Zone is the domain name of the cluster
-
-func ParseStringToIPNet(s string) (ipnet *net.IPNet, err error) {
-	_, ipnet, err = net.ParseCIDR(s)
-	return
-}
-
-func ParseIPNetToIPs(ipv4Net *net.IPNet) (ips []net.IP) {
-	// convert IPNet struct mask and address to uint32
-	// network is BigEndian
-	mask := binary.BigEndian.Uint32(ipv4Net.Mask)
-	start := binary.BigEndian.Uint32(ipv4Net.IP)
-
-	// find the final address
-	finish := (start & mask) | (mask ^ 0xffffffff)
-
-	// loop through addresses as uint32
-	for i := start; i <= finish; i++ {
-		// convert back to net.IP
-		ip := make(net.IP, 4)
-		binary.BigEndian.PutUint32(ip, i)
-		ips = append(ips, ip)
-	}
-	return
-}
-
-func PTRRecord(ip net.IP) []string {
-	names, err := NetResolver.LookupAddr(context.Background(), ip.String())
-	if err != nil {
-		log.Debugf("LookupAddr failed: %v", err)
-		return nil
-	}
-	return names
-}
-
-func SRVRecord(svcDomain string) (string, []*net.SRV, error) {
-	cname, srvs, err := NetResolver.LookupSRV(context.Background(), "", "", svcDomain)
-	return cname, srvs, err
-}
-
-func ARecord(domain string) (ips []net.IP, err error) {
-	// ips, err = NetResolver.LookupIP()
-	ips, err = NetResolver.LookupIP(context.Background(), "ip", domain)
-	return
-}
-
-func IPtoPodHostName(ip, namespace string) string {
-	return fmt.Sprintf("%s.%s.pod.%s", strings.ReplaceAll(ip, ".", "-"), namespace, Zone)
-}
-
-func TestPodVerified() bool {
+// CheckPodVerified is utils to check if current Kubernetes has set pod verified
+func CheckPodVerified() bool {
 	iplist := []string{
 		"8.8.8.8",
 		"1.1.1.1",
@@ -85,22 +28,56 @@ func TestPodVerified() bool {
 	return true
 }
 
-func TXTRecord(domain string) (txts []string, err error) {
-	txts, err = NetResolver.LookupTXT(context.Background(), domain)
-	return
-}
-
 // https://github.com/kubernetes/dns/blob/master/docs/specification.md
 // CheckKubernetes checks if the current environment is a kubernetes cluster
-func CheckKubernetes() bool {
-	_, err := ARecord("kubernetes.default.svc." + Zone)
-	if err != nil {
-		return false
+func CheckKubeDNS(dns ...*SpiderResolver) bool {
+	if len(dns) > 1 {
+		for _, d := range dns {
+			if CheckKubeDNS(d) {
+				log.Infof("kubernetes cluster found in dns(%v)", d.CurrentDNS())
+				return true
+			}
+		}
+	} else { // less or equal to 1
+		rs := NetResolver
+		if len(dns) > 0 { // use custom dns
+			rs = dns[0]
+		}
+		if CheckKubeDNS_DefaultAPIServer(rs) || CheckKubeDNS_DNSVersion(rs) {
+			return true
+		}
 	}
-	t, err := TXTRecord("dns-version." + Zone)
-	if err != nil {
-		return false
+	return false
+}
+
+func CheckKubeDNS_DefaultAPIServer(dns *SpiderResolver) bool {
+	info, err := dns.ARecord("kubernetes.default.svc." + Zone)
+	if err == nil {
+		log.Infof("kubernetes.default.svc.%v found! in dns(%v): %v", Zone, dns.CurrentDNS(), info)
+		return true
 	}
-	log.Infof("dns-version: %v", strings.Join(t, ","))
-	return true
+	log.Tracef("kubernetes.default.svc.%v not found in dns(%v)", Zone, dns.CurrentDNS())
+	info, err = dns.ARecord("kubernetes.default.svc") // try shorted if Zone is incorrect
+	if err == nil {
+		log.Warnf("kubernetes.default.svc found! in dns(%v): %v, maybe %v is incorrect", dns.CurrentDNS(), info, Zone)
+		return true
+	}
+	log.Tracef("kubernetes.default.svc not found in dns(%v)", dns.CurrentDNS())
+	return false
+}
+
+func CheckKubeDNS_DNSVersion(dns *SpiderResolver) bool {
+	info, err := dns.TXTRecord("dns-version." + Zone)
+	if err == nil {
+		log.Infof("dns-version.%v found! in dns(%v): %v", Zone, dns.CurrentDNS(), info)
+		return true
+	}
+	log.Tracef("dns-version.%v not found in dns(%v)", Zone, dns.CurrentDNS())
+	info, err = dns.TXTRecord("dns-version") // try shorted if Zone is incorrect
+	if err == nil {
+		log.Warnf("dns-version found! in dns(%v): %v, maybe %v is incorrect", dns.CurrentDNS(), info, Zone)
+		return true
+	}
+	log.Tracef("dns-version not found in dns(%v)", dns.CurrentDNS())
+	return false
 }

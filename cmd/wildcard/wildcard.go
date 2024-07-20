@@ -13,7 +13,10 @@ func init() {
 }
 
 var WildCardCmd = &cobra.Command{
-	Use:   "wild",
+	Use: "wild",
+	Aliases: []string{
+		"w",
+	},
 	Short: "wild is a tool to abuse wildcard feature in kubernetes service discovery",
 	Run: func(cmd *cobra.Command, args []string) {
 		if command.Opts.Zone == "" {

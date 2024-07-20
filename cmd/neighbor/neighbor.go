@@ -48,7 +48,7 @@ var NeighborCmd = &cobra.Command{
 	Short:   "neighbor is a tool to discover k8s pod and available ip in subnet (require k8s coredns with pod verified config)",
 	Aliases: []string{"n", "nei"},
 	Run: func(cmd *cobra.Command, args []string) {
-		if !pkg.TestPodVerified() {
+		if !pkg.CheckPodVerified() {
 			log.Fatalf("k8s coredns with pod verified config could not be set")
 		}
 		if Opts.NamespaceWordlist != "" {
