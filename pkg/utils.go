@@ -43,7 +43,7 @@ func CheckKubeDNS(dns ...*SpiderResolver) bool {
 		if len(dns) > 0 { // use custom dns
 			rs = dns[0]
 		}
-		if CheckKubeDNS_DefaultAPIServer(rs) || CheckKubeDNS_DNSVersion(rs) {
+		if CheckKubeDNS_DefaultAPIServer(rs) || CheckKubeDNS_DNSVersion(rs) || CheckKubeDNS_NS_DNS_DOMAIN(rs) {
 			return true
 		}
 	}
@@ -79,5 +79,21 @@ func CheckKubeDNS_DNSVersion(dns *SpiderResolver) bool {
 		return true
 	}
 	log.Tracef("dns-version not found in dns(%v)", dns.CurrentDNS())
+	return false
+}
+
+func CheckKubeDNS_NS_DNS_DOMAIN(dns *SpiderResolver) bool {
+	info, err := dns.ARecord("ns.dns." + Zone)
+	if err == nil {
+		log.Infof("ns.dns.%v found in dns(%v)! response: %v", Zone, dns.CurrentDNS(), info)
+		return true
+	}
+	log.Tracef("ns.dns.%v not found in dns(%v)", Zone, dns.CurrentDNS())
+	info, err = dns.ARecord("ns.dns") // try shorted if Zone is incorrect
+	if err == nil {
+		log.Warnf("ns.dns found in dns(%v)! response: %v, maybe %v is incorrect", dns.CurrentDNS(), info, Zone)
+		return true
+	}
+	log.Tracef("ns.dns not found in dns(%v)", dns.CurrentDNS())
 	return false
 }
