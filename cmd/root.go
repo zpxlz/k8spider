@@ -15,7 +15,7 @@ var Opts = struct {
 	SvcDomains []string
 	Zone       string
 	OutputFile string
-	Verbose    string
+	Verbose    int
 
 	MultiThreadingMode bool
 	ThreadingNum       int
@@ -30,7 +30,7 @@ func init() {
 	RootCmd.PersistentFlags().StringSliceVarP(&Opts.SvcDomains, "svc-domains", "s", []string{}, "service domains, like: kubernetes.default,etcd.default don't add zone like svc.cluster.local")
 	RootCmd.PersistentFlags().StringVarP(&Opts.Zone, "zone", "z", "cluster.local", "zone")
 	RootCmd.PersistentFlags().StringVarP(&Opts.OutputFile, "output-file", "o", "", "output file")
-	RootCmd.PersistentFlags().StringVarP(&Opts.Verbose, "verbose", "v", "info", "log level (debug,info,trace,warn,error,fatal,panic)")
+	RootCmd.PersistentFlags().CountVarP(&Opts.Verbose, "verbose", "v", "log level (-v debug,-vv trace, info")
 	RootCmd.PersistentFlags().BoolVarP(&Opts.MultiThreadingMode, "thread", "t", false, "multi threading mode, work pair with -n")
 	RootCmd.PersistentFlags().IntVarP(&Opts.ThreadingNum, "thread-num", "n", 16, "threading num, default 16")
 
@@ -42,42 +42,39 @@ var RootCmd = &cobra.Command{
 	Short: "k8spider is a tool to discover k8s services",
 	Long:  "k8spider is a tool to discover k8s services",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		// Set Log Levels
 		SetLogLevel(Opts.Verbose)
+		// Set pkg global config
+		pkg.Zone = Opts.Zone
 		if Opts.DnsServer != "" {
 			pkg.NetResolver = pkg.WarpDnsServer(Opts.DnsServer)
 		}
-		if Opts.SkipKubeDNSCheck == false { // Not Skip
+		// Check if current environment is a kubernetes cluster
+		// If the command is whereisdns, that DNS is not sure , so skip this check
+		// If SkipKubeDNSCheck is true, skip this check!
+		if Opts.SkipKubeDNSCheck == false || cmd.Use != "whereisdns" {
 			if pkg.CheckKubeDNS() {
 				log.Warn("current environment is not a kubernetes cluster")
 				os.Exit(1)
 			}
 		}
-		pkg.Zone = Opts.Zone
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		_ = cmd.Help()
 	},
 }
 
-func SetLogLevel(level string) {
-	switch level {
-	case "trace":
-		log.SetLevel(log.TraceLevel)
-	case "debug":
-		log.SetLevel(log.DebugLevel)
-	case "info":
-		log.SetLevel(log.InfoLevel)
-	case "warn":
-		log.SetLevel(log.WarnLevel)
-	case "error":
-		log.SetLevel(log.ErrorLevel)
-	case "fatal":
-		log.SetLevel(log.FatalLevel)
-	case "panic":
-		log.SetLevel(log.PanicLevel)
-	default:
-		log.SetLevel(log.InfoLevel)
+var LevelMap = []log.Level{
+	log.InfoLevel,  // 0
+	log.DebugLevel, // 1
+	log.TraceLevel, // 2
+}
+
+func SetLogLevel(level int) {
+	if level > 2 {
+		level = 2
 	}
+	log.SetLevel(LevelMap[level])
 }
 
 func Execute() {
