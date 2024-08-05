@@ -42,17 +42,22 @@ var RootCmd = &cobra.Command{
 	Short: "k8spider is a tool to discover k8s services",
 	Long:  "k8spider is a tool to discover k8s services",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		// Set Log Levels
 		SetLogLevel(Opts.Verbose)
+		// Set pkg global config
+		pkg.Zone = Opts.Zone
 		if Opts.DnsServer != "" {
 			pkg.NetResolver = pkg.WarpDnsServer(Opts.DnsServer)
 		}
-		if Opts.SkipKubeDNSCheck == false { // Not Skip
+		// Check if current environment is a kubernetes cluster
+		// If the command is whereisdns, that DNS is not sure , so skip this check
+		// If SkipKubeDNSCheck is true, skip this check!
+		if Opts.SkipKubeDNSCheck == false || cmd.Use != "whereisdns" {
 			if pkg.CheckKubeDNS() {
 				log.Warn("current environment is not a kubernetes cluster")
 				os.Exit(1)
 			}
 		}
-		pkg.Zone = Opts.Zone
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		_ = cmd.Help()
