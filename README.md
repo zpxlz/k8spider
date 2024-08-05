@@ -35,6 +35,8 @@ echo $KUBERNETES_SERVICE_HOST
 
 ## Example
 
+### Normal Attack - all command - ALL IN ONE
+
 ```bash
 root@pod:/var/www/html/tools# env |grep KUBERNETES
 KUBERNETES_SERVICE_PORT_HTTPS=443
@@ -45,7 +47,8 @@ KUBERNETES_PORT_443_TCP_ADDR=10.43.0.1
 KUBERNETES_SERVICE_HOST=10.43.0.1
 KUBERNETES_PORT=tcp://10.43.0.1:443
 KUBERNETES_PORT_443_TCP_PORT=443
-root@pod:/var/www/html/tools# ./k8spider all -c 10.43.43.1/24
+
+root@pod:/var/www/html/tools# ./k8spider all # or  try ./k8spider all -c 10.43.0.1/16  
 INFO[0000] PTRrecord 10.43.43.87 --> kube-state-metrics.lens-metrics.svc.cluster.local. 
 INFO[0000] PTRrecord 10.43.43.93 --> metrics-server.kube-system.svc.cluster.local. 
 INFO[0000] SRVRecord: kube-state-metrics.lens-metrics.svc.cluster.local. --> kube-state-metrics.lens-metrics.svc.cluster.local.:8080 
@@ -53,5 +56,60 @@ INFO[0000] SRVRecord: metrics-server.kube-system.svc.cluster.local. --> metrics-
 INFO[0000] {"Ip":"10.43.43.87","SvcDomain":"kube-state-metrics.lens-metrics.svc.cluster.local.","SrvRecords":[{"Cname":"kube-state-metrics.lens-metrics.svc.cluster.local.","Srv":[{"Target":"kube-state-metrics.lens-metrics.svc.cluster.local.","Port":8080,"Priority":0,"Weight":100}]}]} 
 ```
 
+This command will try wildcard (any.any.svc.cluster.local) / Axfr dumping at first and brute force all services in the cluster.
+
+#### Advanced 1: threading mode
+
+```bash
+./k8spider all -t  
+# if you want to higher threads, you can use 
+./k8spider all -t -n 16
+```
+
+#### Advanced 2: no default Zone (cluster.local) and specific DNS server
+
+```bash
+./k8spider all -z myzone.com -d 10.43.0.10:53
+```
+
+> remember if kubernetes DNS is reachable at remote, you can use it to scan all services under the cluster COMPLETELY REMOTELY.
+> 
+
+### Normal Attack - wildcard and axfr command
+
+```bash
+./k8spider axfr 
+./k8spider axfr -z myzone.com -d 10.10.0.10:53
+./k8spider wild
+```
+
+### Advanced Conditional Attack - neighbor command
+
+```bash
+./k8spider neighbor -p <pod-cidr check your ifconfig eth0> -n <current-ns>
+```
+
+If your kubernetes dns sets verified pod mode, it will give your pod ip a DNS name under this namespace, and non allocated
+IP never have.
+
+But it's non-default option for dns settings. 
+
+Default is insecure pod, and it will respond your any (include invalid/non-exists) pod DNS with given IP.
+
+### Customized Attack - service 
+
+```bash
+./k8spider srv -s kubernetes.default 
+```
+
+This command will respond you with registered service ports.
+
+### Customized Attack - subnet
+
+```bash
+./k8spider subnet <-c cidr-srv> 
+```
+
+This command will only scan PTR service in the given subnet.
 
 
