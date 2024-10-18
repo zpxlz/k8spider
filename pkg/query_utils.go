@@ -3,6 +3,8 @@ package pkg
 import (
 	"context"
 	"net"
+	"regexp"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -15,18 +17,65 @@ var (
 )
 
 type SpiderResolver struct {
-	dns string
-	ctx context.Context
-	r   *net.Resolver
+	dns      string
+	ctx      context.Context
+	r        *net.Resolver
+	filter   []*regexp.Regexp
+	contains []string
 }
 
 func DefaultResolver() *SpiderResolver {
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(DnsTimeout)*time.Second) // I don't think if a inside cluster dns query has more than 2s latency.
 	return &SpiderResolver{
-		dns: "<default-dns>",
-		r:   net.DefaultResolver,
-		ctx: ctx,
+		dns:      "<default-dns>",
+		r:        net.DefaultResolver,
+		ctx:      ctx,
+		filter:   []*regexp.Regexp{},
+		contains: []string{},
 	}
+}
+
+func (r *SpiderResolver) SetFilter(filters ...string) {
+	for _, filter := range filters {
+		r.filter = append(r.filter, regexp.MustCompile(filter))
+	}
+}
+
+func (r *SpiderResolver) SetContainsFilter(name ...string) {
+	r.contains = append(r.contains, name...)
+}
+
+func (r *SpiderResolver) SetSuffixFilter(filter string) {
+	r.SetFilter(filter + "$")
+}
+
+func (r *SpiderResolver) filterString(target string) bool {
+	log.Tracef("filtering %s", target)
+	for _, re := range r.filter {
+		if re.MatchString(target) {
+			log.Tracef("target %s matched regexp rule %s", target, re.String())
+			return true
+		}
+	}
+	for _, re := range r.contains {
+		if strings.Contains(target, re) {
+			log.Tracef("target %s matched contains rule %s", target, re)
+			return true
+		}
+	}
+	return false
+}
+
+func (r *SpiderResolver) filterStringArray(target []string) []string {
+	var filtered []string
+	for _, re := range target {
+		if r.filterString(re) {
+			continue
+		}
+		filtered = append(filtered, re)
+	}
+	log.Tracef("filtering %s \nresult: %s", strings.Join(target, " "), strings.Join(filtered, " "))
+	return filtered
 }
 
 func WarpDnsServer(dnsServer string) *SpiderResolver {
@@ -54,7 +103,7 @@ func (s *SpiderResolver) PTRRecord(ip net.IP) []string {
 		log.Debugf("LookupAddr failed: %v", err)
 		return nil
 	}
-	return names
+	return s.filterStringArray(names)
 }
 
 func PTRRecord(ip net.IP) []string {
@@ -63,6 +112,13 @@ func PTRRecord(ip net.IP) []string {
 
 func (s *SpiderResolver) SRVRecord(svcDomain string) (string, []*net.SRV, error) {
 	cname, srvs, err := s.r.LookupSRV(s.ctx, "", "", svcDomain)
+	var finalsrv []*net.SRV
+	for _, srv := range srvs {
+		if s.filterString(srv.Target) {
+			continue
+		}
+		finalsrv = append(finalsrv, srv)
+	}
 	return cname, srvs, err
 }
 

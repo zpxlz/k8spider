@@ -22,6 +22,9 @@ var Opts = struct {
 	ThreadingNum       int
 
 	SkipKubeDNSCheck bool
+
+	FilterRules   []string
+	FilterStrings []string
 }{}
 
 func init() {
@@ -43,6 +46,9 @@ func init() {
 	RootCmd.PersistentFlags().IntVarP(&Opts.ThreadingNum, "thread-num", "n", 16, "threading num, default 16")
 
 	RootCmd.PersistentFlags().BoolVarP(&Opts.SkipKubeDNSCheck, "skip-kube-dns-check", "k", false, "skip kube-dns check, force check if current environment is matched kube-dns schema")
+
+	RootCmd.PersistentFlags().StringSliceVarP(&Opts.FilterRules, "filter-rules", "f", []string{}, "filter regexp rules")
+	RootCmd.PersistentFlags().StringSliceVarP(&Opts.FilterStrings, "filter-strings", "s", []string{}, "filter contained strings")
 }
 
 var RootCmd = &cobra.Command{
@@ -62,7 +68,12 @@ var RootCmd = &cobra.Command{
 		if Opts.DnsServer != "" {
 			pkg.NetResolver = pkg.WarpDnsServer(Opts.DnsServer)
 		}
-
+		for _, rules := range Opts.FilterRules {
+			pkg.NetResolver.SetFilter(rules)
+		}
+		for _, rules := range Opts.FilterStrings {
+			pkg.NetResolver.SetFilter(rules)
+		}
 		// Check if current environment is a kubernetes cluster
 		// If the command is whereisdns, which means DNS is not sure , so skip this check!
 		// If SkipKubeDNSCheck is true, skip this check!
