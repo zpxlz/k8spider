@@ -72,7 +72,7 @@ var RootCmd = &cobra.Command{
 			pkg.NetResolver.SetFilter(rules)
 		}
 		for _, rules := range Opts.FilterStrings {
-			pkg.NetResolver.SetFilter(rules)
+			pkg.NetResolver.SetContainsFilter(rules)
 		}
 		// Check if current environment is a kubernetes cluster
 		// If the command is whereisdns, which means DNS is not sure , so skip this check!
