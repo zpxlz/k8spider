@@ -47,8 +47,8 @@ func init() {
 
 	RootCmd.PersistentFlags().BoolVarP(&Opts.SkipKubeDNSCheck, "skip-kube-dns-check", "k", false, "skip kube-dns check, force check if current environment is matched kube-dns schema")
 
-	RootCmd.PersistentFlags().StringSliceVarP(&Opts.FilterRules, "filter-rules", "f", []string{}, "filter regexp rules")
-	RootCmd.PersistentFlags().StringSliceVarP(&Opts.FilterStrings, "filter-strings", "s", []string{}, "filter contained strings")
+	RootCmd.PersistentFlags().StringSliceVarP(&Opts.FilterRules, "filter-rules", "F", []string{}, "filter regexp rules")
+	RootCmd.PersistentFlags().StringSliceVarP(&Opts.FilterStrings, "filter-strings", "f", []string{}, "filter contained strings")
 }
 
 var RootCmd = &cobra.Command{
