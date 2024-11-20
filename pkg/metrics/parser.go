@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"encoding/json"
 	"errors"
 	"strings"
 
@@ -11,9 +12,9 @@ import (
 var (
 	MetricsPatterns = map[string]string{
 		"METRIC_HEAD": "^%{WORD:metric_name}{",
-		"LAST_LABEL":  `(%{DATA:last_label_name}="%{DATA:last_label_value}")`,
+		"LAST_LABEL":  `(%{DATA:last_label_name}="%{DATA:last_label_value}",?)`,
 		"NUMBER_SCI":  "%{NUMBER}(e%{NUMBER})?",
-		"METRIC_TAIL": `}%{SPACE}%{NUMBER_SCI:metric_value}$`,
+		"METRIC_TAIL": `%{SPACE}%{NUMBER_SCI:metric_value}$`,
 		"NORMAL_EXPR": `^%{WORD:metric_name}{((namespace="%{DATA:namespace}")|(%{DATA:last_label_name}=\"%{DATA:last_label_value}\")(,|))*}%{SPACE}%{NUMBER}(e%{NUMBER})?$`,
 	}
 	COMMON_MATCH_GROK = grok.New()
@@ -21,18 +22,24 @@ var (
 
 const COMMON_MATCH = `^%{WORD:name}{((namespace="%{DATA:namespace}")|(%{DATA:last_label_name}="%{DATA:last_label_value}")(,|))*}%{SPACE}%{NUMBER}(e%{NUMBER})?$`
 
+type Label struct {
+	Key   string `json:"key"`
+	Value string `json:"value""`
+}
+
 type MetricMatcher struct {
-	MtName      string
-	header      string
-	neededLabel []string
-	grok        *grok.Grok
+	Name         string     `json:"name"`
+	Header       string     `json:"-"`
+	Labels       []Label    `json:"labels"`
+	grok         *grok.Grok `json:"-"`
+	finalPattern string
 }
 
 func NewMetricMatcher(label_name string) *MetricMatcher {
 	return &MetricMatcher{
-		MtName:      label_name,
-		grok:        grok.New(),
-		neededLabel: make([]string, 0),
+		Name:   label_name,
+		grok:   grok.New(),
+		Labels: make([]Label, 0),
 	}
 }
 
@@ -51,25 +58,23 @@ func (mt *MetricMatcher) Compile() error {
 	if err := mt.grok.AddPatterns(MetricsPatterns); err != nil {
 		return err
 	}
-	header := mt.header
-	if mt.header == "" {
-		header = `^` + mt.MtName + `{` // custom head
+	if mt.Header == "" {
+		mt.Header = `kube_` + mt.Name + `_info` // custom head
 	}
+	header := mt.Header
 	var body []string
-	for _, label := range mt.neededLabel {
-		body = append(body, "("+label+`=`+`"%{DATA:`+strings.ToUpper(label)+`}")`)
+	for _, label := range mt.Labels {
+		body = append(body, "("+label.Key+`=`+`"%{DATA:`+label.Key+`}",?)`)
 	}
-	tail := `${METRIC_TAIL}`
-	pattern := header + "(" + strings.Join(body, "|") + "|%{LAST_LABEL}(,|))*" + tail
+	tail := `%{METRIC_TAIL}`
+	pattern := header + "{" + "(" + strings.Join(body, "|") + "|%{LAST_LABEL})*" + "}" + tail
+	mt.finalPattern = pattern
 	log.Debugln("generated pattern: ", pattern)
 	return mt.grok.Compile(pattern, true)
 }
 
 func (mt *MetricMatcher) Match(target string) (res map[string]string, err error) {
-	if !mt.grok.MatchString(target) {
-		if len(target) > 100 {
-			target = target[:99]
-		}
+	if !strings.HasPrefix(target, mt.Header) {
 		log.Debugf("not match: %s", target)
 		if COMMON_MATCH_GROK.MatchString(target) {
 			res, err = COMMON_MATCH_GROK.ParseString(target)
@@ -84,16 +89,50 @@ func (mt *MetricMatcher) Match(target string) (res map[string]string, err error)
 				err,
 			)
 		}
+		return nil, errors.New("can't match")
+	} else {
+		res, err = mt.grok.ParseString(target)
+		if res != nil && len(res) != 0 {
+			mt.setResult(res)
+		}
+		return res, err
 	}
-	return mt.grok.ParseString(target)
 }
 
 func (mt *MetricMatcher) SetHeader(header string) {
-	mt.header = `^` + header + `{`
+	mt.Header = `^` + header + `{`
 }
 
-func (mt *MetricMatcher) AddLabel(label string) {
-	mt.neededLabel = append(mt.neededLabel, label)
+func (mt *MetricMatcher) AddLabel(label string) *MetricMatcher {
+	mt.Labels = append(mt.Labels, Label{
+		Key:   label,
+		Value: "",
+	})
+	return mt
+}
+
+func (mt *MetricMatcher) setResult(res map[string]string) {
+	for i, label := range mt.Labels {
+		if v, ok := res[label.Key]; ok {
+			mt.Labels[i].Value = v
+		} else {
+			log.Debugf("label %s not found in result", label.Key) // keep it empty
+		}
+	}
+}
+
+func (mt *MetricMatcher) FindLabel(Key string) string {
+	for _, label := range mt.Labels {
+		if label.Key == Key {
+			return label.Value
+		}
+	}
+	return ""
+}
+
+func (mt *MetricMatcher) DumpString() string {
+	b, _ := json.Marshal(mt)
+	return string(b)
 }
 
 func init() {
