@@ -11,7 +11,7 @@ build:
 
 build-static:
 	GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o $(BUILD_DIR)/$(MAIN_PROGRAM_NAME)-linux-static main.go
-	upx -9 $(BUILD_DIR)/$(MAIN_PROGRAM_NAME)-linux-static
+	upx --ultra-brute $(BUILD_DIR)/$(MAIN_PROGRAM_NAME)-linux-static
 
 check-size:
 	ls -alh $(BUILD_DIR)/$(MAIN_PROGRAM_NAME)*

@@ -3,10 +3,11 @@ project_name: k8spider
 before:
   hooks:
     - go mod tidy
-    - go generate ./...
 builds:
   - env:
       - CGO_ENABLED=0
+    ldflags:
+      - -s -w
     goos:
       - darwin
       - windows
@@ -22,6 +23,8 @@ archives:
     format_overrides:
       - goos: windows
         format: zip
+upx:
+  - enabled: true
 
 checksum:
   name_template: "checksums.txt"
