@@ -23,8 +23,13 @@ archives:
     format_overrides:
       - goos: windows
         format: zip
+
 upx:
   - enabled: true
+    compress: best
+    brute: true
+    lzma: true
+
 
 checksum:
   name_template: "checksums.txt"
