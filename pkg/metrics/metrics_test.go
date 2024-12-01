@@ -7,7 +7,7 @@ import (
 )
 
 func TestMetrics(t *testing.T) {
-	f, err := os.Open("./metrics")
+	f, err := os.Open("./metrics_output.txt")
 	if err != nil {
 		t.Fatalf("open file failed: %v", err)
 		t.Fail()
@@ -21,6 +21,11 @@ func TestMetrics(t *testing.T) {
 		t.Fail()
 	}
 
+	output, err := os.OpenFile("./output.txt", os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		t.Fatalf("open output file failed: %v", err)
+	}
+	defer output.Close()
 	for scanner.Scan() {
 		line := scanner.Text()
 		res, err := rule.Match(line)
@@ -28,6 +33,10 @@ func TestMetrics(t *testing.T) {
 			continue
 		} else {
 			t.Logf("matched: %s", res.DumpString())
+			// _, _ = output.WriteString(res.DumpString() + "\n")
 		}
 	}
+	var res ResourceList = ConvertToResource(rule)
+	_, _ = output.WriteString(res.JSON() + "\n")
+	t.Logf(res.JSON())
 }

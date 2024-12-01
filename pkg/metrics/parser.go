@@ -36,9 +36,9 @@ type MetricMatcher struct {
 	ptr          any `json:"-"`
 }
 
-func NewMetricMatcher(label_name string) *MetricMatcher {
+func NewMetricMatcher(t string) *MetricMatcher {
 	return &MetricMatcher{
-		Name:   label_name,
+		Name:   t,
 		grok:   grok.New(),
 		Labels: make([]Label, 0),
 	}
@@ -75,7 +75,7 @@ func (mt *MetricMatcher) Compile() error {
 }
 
 func (mt *MetricMatcher) Match(target string) (res map[string]string, err error) {
-	if !strings.HasPrefix(target, mt.Header+"{") {
+	if !strings.HasPrefix(target, mt.Header) {
 		log.Debugf("not match: %s", target)
 		if COMMON_MATCH_GROK.MatchString(target) {
 			res, err = COMMON_MATCH_GROK.ParseString(target)
@@ -93,6 +93,9 @@ func (mt *MetricMatcher) Match(target string) (res map[string]string, err error)
 		return nil, errors.New("can't match")
 	} else {
 		res, err = mt.grok.ParseString(target)
+		if err != nil || res == nil || len(res) == 0 {
+			return nil, errors.New("match failed, no result found")
+		}
 		mt.setResult(res)
 		return res, err
 	}
