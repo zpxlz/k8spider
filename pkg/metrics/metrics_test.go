@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"bufio"
+	"encoding/json"
 	"os"
 	"testing"
 )
@@ -26,6 +27,7 @@ func TestMetrics(t *testing.T) {
 		t.Fatalf("open output file failed: %v", err)
 	}
 	defer output.Close()
+	var rx []*MetricMatcher
 	for scanner.Scan() {
 		line := scanner.Text()
 		res, err := rule.Match(line)
@@ -33,10 +35,31 @@ func TestMetrics(t *testing.T) {
 			continue
 		} else {
 			t.Logf("matched: %s", res.DumpString())
-			// _, _ = output.WriteString(res.DumpString() + "\n")
+			_, _ = output.WriteString(res.DumpString() + "\n")
+			rx = append(rx, res.CopyData())
 		}
 	}
-	var res ResourceList = ConvertToResource(rule)
+}
+
+func TestConvertToResource(t *testing.T) {
+	output, err := os.OpenFile("./output.txt", os.O_CREATE|os.O_RDONLY, 0644)
+	if err != nil {
+		t.Fatalf("open output file failed: %v", err)
+	}
+	defer output.Close()
+	var rules []*MetricMatcher
+	scanner := bufio.NewScanner(output)
+	for scanner.Scan() {
+		line := scanner.Text()
+		var r *MetricMatcher
+		e := json.Unmarshal([]byte(line), &r)
+		if e != nil {
+			t.Logf("unmarshal failed: %v", e)
+			continue
+		}
+		rules = append(rules, r)
+	}
+	var res ResourceList = ConvertToResource(rules)
 	_, _ = output.WriteString(res.JSON() + "\n")
 	t.Logf(res.JSON())
 }

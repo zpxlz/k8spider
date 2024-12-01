@@ -148,3 +148,11 @@ func init() {
 		log.Fatalf("compile pattern failed: %v", err)
 	}
 }
+
+func (mt *MetricMatcher) CopyData() *MetricMatcher {
+	return &MetricMatcher{
+		Name:   mt.Name,
+		Header: mt.Header,
+		Labels: mt.Labels,
+	}
+}
