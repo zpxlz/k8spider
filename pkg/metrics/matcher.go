@@ -28,7 +28,7 @@ func DefaultMatchRules() MatchRules {
 			AddLabel("namespace").AddLabel("pod").AddLabel("service_account"),
 
 		NewMetricMatcher("service").AddLabel("namespace").AddLabel("service").
-			AddLabel("cluster_ip"),
+			AddLabel("cluster_ip").AddLabel("external_name").AddLabel("load_balancer_ip"),
 		NewMetricMatcher("endpoint_address").SetHeader("kube_endpoint_address").
 			AddLabel("namespace").AddLabel("endpoint").AddLabel("ip"),
 		NewMetricMatcher("endpoint_port").SetHeader("kube_endpoint_ports").

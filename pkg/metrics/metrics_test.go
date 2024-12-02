@@ -8,7 +8,7 @@ import (
 )
 
 func TestMetrics(t *testing.T) {
-	f, err := os.Open("./metrics_output.txt")
+	f, err := os.Open("./metrics")
 	if err != nil {
 		t.Fatalf("open file failed: %v", err)
 		t.Fail()
