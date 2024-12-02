@@ -45,24 +45,43 @@ func (rl *ResourceList) JSON() string {
 	return res
 }
 
-func ConvertToResource(r []*MetricMatcher) []*Resource {
+type ResourceMergeHook func(m *MetricMatcher, resource ResourceList) (res *Resource, addFlag bool)
+
+var EndpointMergeHook ResourceMergeHook = func(m *MetricMatcher, res ResourceList) (r *Resource, addFlag bool) {
+	if m.Name == "endpoint_address" || m.Name == "endpoint_port" {
+		for i, c := range res {
+			if m.FindLabel("namespace") == c.Namespace && m.FindLabel("endpoint") == c.Name {
+				r = res[i]
+				return r, false
+			}
+		}
+		return NewResource("endpoint"), true
+	}
+	return nil, true
+}
+
+func ConvertToResource(r []*MetricMatcher, hooks ...ResourceMergeHook) []*Resource {
 	var res []*Resource
+	if len(hooks) == 0 {
+		hooks = append(hooks, EndpointMergeHook)
+	}
+
 	for _, m := range r {
 		var resource *Resource
 		var addFlag = true
 
-		resourceType := m.Name
-		if m.Name == "endpoint_address" || m.Name == "endpoint_port" {
-			for i, c := range res {
-				if m.FindLabel("namespace") == c.Namespace && m.FindLabel("endpoint") == c.Name {
-					resource = res[i]
-					addFlag = false
-				}
+		for _, hook := range hooks {
+			resource, addFlag = hook(m, res)
+			if resource != nil {
+				break
 			}
-			resourceType = "endpoint"
 		}
 
-		if addFlag {
+		resourceType := m.Name
+		if resource != nil {
+			resourceType = resource.Type
+		}
+		if resource == nil && addFlag {
 			resource = NewResource(resourceType)
 		}
 
