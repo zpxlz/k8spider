@@ -150,9 +150,13 @@ func init() {
 }
 
 func (mt *MetricMatcher) CopyData() *MetricMatcher {
+	var newLabel []Label
+	for _, label := range mt.Labels {
+		newLabel = append(newLabel, label)
+	}
 	return &MetricMatcher{
-		Name:   mt.Name,
-		Header: mt.Header,
-		Labels: mt.Labels,
+		Name:   strings.Clone(mt.Name),
+		Header: strings.Clone(mt.Header),
+		Labels: newLabel,
 	}
 }

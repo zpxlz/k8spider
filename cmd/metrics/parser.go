@@ -58,6 +58,7 @@ var MetricCmd = &cobra.Command{
 		log.Debugf("start to parse metrics line by line\n")
 
 		var rx []*metrics.MetricMatcher
+
 		scanner := bufio.NewScanner(r)
 		for scanner.Scan() {
 			line := scanner.Text()

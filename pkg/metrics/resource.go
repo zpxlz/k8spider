@@ -4,9 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type Resource struct {
@@ -45,20 +42,9 @@ func (r *Resource) JSON() string {
 }
 
 func (rl *ResourceList) Print(writer ...io.Writer) {
-	var W io.Writer
-	if len(writer) == 0 {
-		W = os.Stdout
-	} else {
-		w := io.MultiWriter(writer...)
-		W = io.MultiWriter(os.Stdout, w)
-	}
+	var w io.Writer = io.MultiWriter(writer...)
 	for _, r := range *rl {
-		data, err := json.Marshal(r.JSON())
-		if err != nil {
-			log.Error(err)
-			return
-		}
-		_, _ = fmt.Fprintf(W, "%v\n", string(data))
+		_, _ = fmt.Fprintf(w, "%v\n", r.JSON())
 	}
 }
 
