@@ -1,6 +1,13 @@
 package metrics
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"os"
+
+	log "github.com/sirupsen/logrus"
+)
 
 type Resource struct {
 	Namespace string              `json:"namespace"`
@@ -37,12 +44,22 @@ func (r *Resource) JSON() string {
 	return string(b)
 }
 
-func (rl *ResourceList) JSON() string {
-	var res = ""
-	for _, r := range *rl {
-		res += r.JSON() + "\n"
+func (rl *ResourceList) Print(writer ...io.Writer) {
+	var W io.Writer
+	if len(writer) == 0 {
+		W = os.Stdout
+	} else {
+		w := io.MultiWriter(writer...)
+		W = io.MultiWriter(os.Stdout, w)
 	}
-	return res
+	for _, r := range *rl {
+		data, err := json.Marshal(r.JSON())
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		_, _ = fmt.Fprintf(W, "%v\n", string(data))
+	}
 }
 
 type ResourceMergeHook func(m *MetricMatcher, resource ResourceList) (res *Resource, addFlag bool)

@@ -60,6 +60,5 @@ func TestConvertToResource(t *testing.T) {
 		rules = append(rules, r)
 	}
 	var res ResourceList = ConvertToResource(rules)
-	_, _ = output.WriteString(res.JSON() + "\n")
-	t.Logf(res.JSON())
+	res.Print(os.Stderr)
 }
