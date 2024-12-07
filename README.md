@@ -112,4 +112,26 @@ This command will respond you with registered service ports.
 
 This command will only scan PTR service in the given subnet.
 
+### helpers - whereisdns 
+
+This command will help you to find out where is the kubernetes DNS server. It uses some specific DNS query to find it in given 
+cidr
+
+### helpers - metrics
+
+This command will help you to parse the kube-state-metrics information and extract all useful information in metrics.
+
+like 
+
+```text
+# HELP kube_service_info [STABLE] Information about service.
+# TYPE kube_service_info gauge
+kube_service_info{namespace="default",service="fastgpt-sandbox-service",uid="61b0674c-33c3-4e6d-a7a1-51157491a35a",cluster_ip="10.43.81.90",external_name="",load_balancer_ip=""} 1
+```
+
+to 
+
+```text
+{"namespace":"default","type":"service","name":"fastgpt-sandbox-service","spec":{"cluster_ip":["10.43.81.90"]}}
+```
 
