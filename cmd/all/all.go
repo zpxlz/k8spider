@@ -48,6 +48,7 @@ var AllCmd = &cobra.Command{
 			log.Warnf("ParseStringToIPNet failed: %v", err)
 			return
 		}
+
 		var finalRecord define.Records
 		if command.Opts.MultiThreadingMode {
 			finalRecord = RunMultiThread(ipNets, command.Opts.ThreadingNum)
@@ -55,6 +56,7 @@ var AllCmd = &cobra.Command{
 			finalRecord = Run(ipNets)
 		}
 		printer.PrintResult(finalRecord, command.Opts.OutputFile)
+
 		PostRun(finalRecord)
 	},
 }
@@ -78,6 +80,9 @@ func RunMultiThread(net *net.IPNet, count int) (finalRecord define.Records) {
 }
 
 func PostRun(finalRecord define.Records) {
+	if finalRecord == nil || len(finalRecord) == 0 {
+		return
+	}
 	log.Info("Extract Namespaces: ")
 	list := post.RecordsDumpNameSpace(finalRecord, command.Opts.Zone)
 	for _, ns := range list {

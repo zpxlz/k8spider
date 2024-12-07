@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"regexp"
 	"strings"
@@ -89,7 +90,9 @@ func WarpDnsServer(dnsServer string) *SpiderResolver {
 				return d.DialContext(ctx, network, dnsServer)
 			},
 		},
-		ctx: ctx,
+		ctx:      ctx,
+		filter:   []*regexp.Regexp{},
+		contains: []string{},
 	}
 }
 
@@ -146,3 +149,28 @@ func (s *SpiderResolver) TXTRecord(domain string) ([]string, error) {
 func TXTRecord(domain string) (txts []string, err error) {
 	return NetResolver.TXTRecord(domain)
 }
+
+type DnsQuery func(domain string) ([]string, error)
+
+var (
+	QueryPTR DnsQuery = func(domain string) ([]string, error) {
+		return PTRRecord(net.ParseIP(domain)), nil
+	}
+	QueryA DnsQuery = func(domain string) ([]string, error) {
+		res, err := ARecord(domain)
+		var ret []string
+		for _, r := range res {
+			ret = append(ret, r.String())
+		}
+		return ret, err
+	}
+	QueryTXT DnsQuery = TXTRecord
+	QuerySRV DnsQuery = func(domain string) ([]string, error) {
+		_, res, err := SRVRecord(domain)
+		var ret []string
+		for _, r := range res {
+			ret = append(ret, fmt.Sprintf("%s:%d", r.Target, r.Port))
+		}
+		return ret, err
+	}
+)
